@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head 
+          content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Programs</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="/static/theme.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    
+    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+
+    
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="//oss.maxcdn.com/bootbox/4.4.0/bootbox.min.js"></script>
+    
+    <script>
+        $(document).on("click", ".editButton", function(e) {
+         var id = $(this).attr('data-id');
+        $.ajax({
+            url: '/prog_param?program_name=' + id,
+            method: 'GET'
+        }).success(function(response) {
+
+            // Populate the form fields with the data returned from server
+            if (response.length > 0) {
+                data = JSON.parse(response);
+            }
+            else {
+                data = {"number" : "", "name":"", "person_name":"", 
+                        "scientific_importance":"", "number_of_targets":"0", 
+                        "counter":"0", "total_observation_time":"0", 
+                        "total_science_time":"0"};
+            };
+            
+            bootbox.dialog({
+                title: "Program data",
+                message: '<div id="programForm" class="row">'+
+                         '<div class="col-md-12">'+
+                    '<form method="post" class="form-horizontal" id="templateForm">'+
+                         $('#template').html() + '</form>' + '</div>' + '</div>',
+                buttons: {
+                    "Remove": {
+                      className: "btn-danger",
+                      callback: function () {
+                                    bootbox.confirm("Are you sure?", function(result) {
+                                        if (result==true) {
+                                          $.ajax({url: '/remove?program_name=' + id,
+                                                method: 'GET',
+                                                success: function(response_remove) {
+                                                    location.reload(true);
+                                                }
+                                          });
+                                        };
+                                    });
+                                }
+                    },
+                    submit: {
+                        label: "Save",
+                        className: "btn-warning",
+                        callback: function () {
+                                    $.ajax({url: '/save?' + 
+                                             $('#templateForm').serialize(),
+                                            method: 'GET',
+                                            success: function(data) {
+                                                location.reload(true);
+                                            }
+                                    });
+                        }
+                    }
+                }
+            }); 
+            $('[name="number"]').val(data["number"]);
+            $('[name="name"]').val(data["name"]);
+            $('[name="person_name"]').val(data["person_name"]);
+            $('[name="scientific_importance"]').val(data["scientific_importance"]);
+            $('[name="number_of_targets"]').val(data["number_of_targets"]);
+            $('[name="counter"]').val(data["counter"]);
+            $('[name="total_observation_time"]').val(data["total_observation_time"]);
+            $('[name="total_science_time"]').val(data["total_science_time"]);
+            if (response.length == 0) {
+                $('[name="number_of_targets"]').prop('readonly', 'true');
+            }
+            <!-- .removeAttr('readonly'); -->
+            else {$('[name="number_of_targets"]').prop('readonly', 'true');};
+        });
+        });
+    </script>
+  </head>
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" 
+                   data-toggle="collapse" data-target="#navbar" 
+                    aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">Programs</a>
+        </div>
+      </div>
+    </nav>
+
+  <body role="document">
+
+    <div class="container theme-showcase" role="main">
+
+      <div class="page-header">
+        <h2>Programs</h2>
+      </div>
+
+      <div class="row">
+        <div class="col-md-1">
+            <table class="table borderless">
+            <thead>
+            <tr><th>
+            <button type="button" class="btn btn-warning editButton">
+            Add program</button>
+            </th></tr>
+            </thead>
+            </table>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <table class="table table-hover table-condensed">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Number</th>
+                <th>Person name</th>
+                <th>Scientific importance</th>
+                <th>Number of targets</th>
+                <th>Counter</th>
+                <th>Total observation t</th>
+                <th>Total science t</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for program in programs %}
+              <tr class="clickable-row" 
+                  style="cursor: pointer; cursor: hand;">
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.name }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.number }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.person_name }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.scientific_importance }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.number_of_targets }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.counter }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.total_observation_time }}</td>
+                <td onClick="document.location = '/Program_{{ program.number }}';">
+                    {{ program.total_science_time }}</td>
+                <td><button data-id="{{ program.name }}" type="button" 
+                      class="btn btn-xs btn-default editButton">Edit</button></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+<!-- The form which is used to populate the item data -->
+<!-- disabled="disabled" -->
+<div id="programForm" class="row" style="display: none;">
+ <div class="col-md-12">
+  <form method="post" class="form-horizontal" id="template">
+    <div class="form-group">
+        <label class="col-md-4 control-label">Name</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="name">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Number</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="number">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Person name</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="person_name">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Scientific importance</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="scientific_importance">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Number of targets</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="number_of_targets">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Counter</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="counter">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Total observation time</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="total_observation_time">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-md-4 control-label">Total science time</label>
+        <div class="col-md-8">
+            <input type="text" class="form-control" name="total_science_time">
+        </div>
+    </div>
+
+  </form>
+ </div>
+</div>
+
+  </body>
+</html>
