@@ -683,6 +683,19 @@ class Root(object):
             # render programs:
             tmpl = env.get_template('index.html')
             return tmpl.render(programs=programs)
+        # display Programs.xml:
+        elif prog_number == 'Programs.xml':
+            # render Programs.xml:
+            with open(os.path.join(xmlT.path, prog_number), 'r') as f:
+                page = ''.join('{:s}'.format(line) for line in f)
+                page = '<pre>'+page+'</pre>'
+            return page
+#        # display Target_n.xml:
+#        elif 'Program' in prog_number and 'Target' in prog_number \
+#                and 'xml' in prog_number:
+#            pass
+#            page = ''
+#            return page
         else:
             #render targets
             # get program:
