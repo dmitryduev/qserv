@@ -23,6 +23,13 @@ from collections import OrderedDict
 
 from dicttoxml import dicttoxml
 
+import astropy
+from astropy.io.votable import parse_single_table
+from astropy.io import ascii
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+import numpy as np
+
 def prettify(elem):
     """
         Return a pretty-printed XML string for the Element.
@@ -103,6 +110,9 @@ class xmlTree(object):
                          
     def getProgramNames(self):
         return [p.name for p in self.Programs]
+        
+    def getProgramNumbers(self):
+        return [p.number for p in self.Programs]
 
     @staticmethod
     def buildProgramXMLtree(programs):
@@ -130,7 +140,7 @@ class xmlTree(object):
         return tree
 
 
-    def dumpProgram(self, name, number, person_name, \
+    def dumpProgram(self, program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
                 counter, total_observation_time, total_science_time):
         '''
@@ -139,28 +149,31 @@ class xmlTree(object):
             self.Programs
         except:
             self.getPrograms()
-        programNames = self.getProgramNames()
+        programNumbers = self.getProgramNumbers()
         
-        if name not in programNames:
+        if program_number not in programNumbers or program_number=='':
             # add new program
             self.Programs.append(Program(number, name, person_name, \
                  scientific_importance, number_of_targets, counter, \
                  total_observation_time, total_science_time))
         else:
             # change existing
-            ind = [i for i,p in enumerate(self.Programs) if p.name==name][0]
+            ind = [i for i,p in enumerate(self.Programs) \
+                    if p.number==program_number][0]
             self.Programs[ind] = Program(number, name, person_name, \
                  scientific_importance, number_of_targets, counter, \
                  total_observation_time, total_science_time)
         
+        # rename folder containing target xml files
+        if program_number not in ('', number):
+            os.rename(os.path.join(self.path, \
+                                       'Program_{:s}'.format(program_number)),\
+                      os.path.join(self.path, 'Program_{:s}'.format(number)))
+        
         # build new xml and write it to disk:
         tree = self.buildProgramXMLtree(self.Programs)
         
-        # this is unpretty:
-#        tree.write(os.path.join('/Users/dmitryduev/_caltech/roboao/',\
-#                    'tst.xml'))
-        
-        # this is pretty:
+        # make is pretty:
         with open(os.path.join(self.path, 'Programs.xml'), 'w') as f:
             f.write(minidom.parseString(ET.tostring(tree.getroot(), \
                                             'utf-8')).toprettyxml(indent="\t"))
@@ -220,11 +233,27 @@ class xmlTree(object):
             target_number is None or target_number=='':
             return {}
         
+        try:
+            self.Programs
+        except:
+            self.Programs = self.getPrograms()
+        program = [p for p in self.Programs if p.number==program_number][0]
+        
         target_xml = 'Target_{:s}.xml'.format(target_number)
         target_xml_path = os.path.join(self.path, \
                             'Program_{:s}'.format(program_number), target_xml)
         if os.path.exists(target_xml_path):
             os.remove(target_xml_path)
+        
+        # rename remaining xml files:
+        for i in range(int(target_number)+1, int(program.number_of_targets)+1):
+            target_xml_old = 'Target_{:d}.xml'.format(i)
+            target_xml_old_path = os.path.join(self.path, \
+                        'Program_{:s}'.format(program_number), target_xml_old)
+            target_xml_new = 'Target_{:d}.xml'.format(i-1)
+            target_xml_new_path = os.path.join(self.path, \
+                        'Program_{:s}'.format(program_number), target_xml_new)
+            os.rename(target_xml_old_path, target_xml_new_path)
         
         # update self.Programs
         self.Programs = self.getPrograms()
@@ -474,7 +503,8 @@ class xmlTree(object):
             f.write('{:s}'.format(target_xml[-1]))
 
         # update program number of targets!!
-        self.dumpProgram(program.name, program.number, program.person_name, \
+        self.dumpProgram(program.number, \
+                program.name, program.number, program.person_name, \
                 program.scientific_importance, \
                 str(int(program.number_of_targets)+targets_added),\
                 program.counter, program.total_observation_time, \
@@ -503,29 +533,82 @@ class xmlTree(object):
         
         targets_added = 0
         
-        # iterate over entries in the input file
-        for ei, entry in enumerate(data):
-            # find comment:
-            quote_ind = [i for i,c in enumerate(entry) if c=='\"']
-            # split line:
-            entry = entry[:quote_ind[0]].split() + \
-                        [entry[quote_ind[0]:quote_ind[1]+1]]
+        # do some guessing about the table
+        if type(data) == astropy.io.votable.tree.Table:
+            # VOtable? convert to normal table
+            table = data.to_table()
+        else:
+            table = data
+        # target names:
+        target_name_field = [table[f].name for f in table.colnames \
+                                if 'name' in table[f].name or \
+                                (table[f].description is not None and\
+                                'name' in table[f].description)][0]
+        if type(table[target_name_field].data) is not np.ndarray:
+            target_names_list = table[target_name_field].data.data
+        else:
+            target_names_list = table[target_name_field].data
+        # RA/Dec:
+        if '_RAJ2000' in table.colnames and '_DEJ2000' in table.colnames:
+            # no columns? add them:
+            ra = [ra.replace(' ', ':') for ra in table['_RAJ2000']]
+            dec = [dec.replace(' ', ':') for dec in table['_DEJ2000']]
+        else:
+            # ra/dec in degrees?
+            if not 'RAJ2000' in table.colnames or not 'DEJ2000' in table.colnames:
+                raise Exception('Could not find coordinates in the imported file')
+            else:
+                # get units:
+                if table['RAJ2000'].description is not None and \
+                        not 'degree' in table['RAJ2000'].description:
+                    raise Exception('RAJ2000 must be in degrees!')
+                else:
+                    crd = SkyCoord(ra=ra, dec=dec, \
+                        unit=(u.deg, u.deg), frame='icrs').to_string('hmsdms')
+                    crd_str = np.array([c.split() for c in crd])
+                    ra = [ra.replace('h',':').replace('m',':').replace('s','')\
+                            for ra in crd_str[:,0]]
+                    dec = [dec.replace('d',':').replace('m',':').replace('s','')\
+                            for dec in crd_str[:,1]]
+        # no comments?
+        if 'comment' in table.colnames:
+            if type(table['comment'].data) is not np.ndarray:
+                comment = table['comment'].data.data
+            else:
+                comment = table['comment'].data
+        else:
+            comment = ['']*len(target_names_list)
+        # Vmag/Vemag/mag
+        if 'Vmag' in table.colnames:
+            mag = table['Vmag']
+        elif 'Vemag' in table.colnames:
+            mag = table['Vemag']
+        elif 'mag' in table.colnames:
+            mag = table['mag']
             
+        # epoch should be J2000?
+        if 'epoch' in table.colnames:
+            epoch = table['epoch']
+        else:
+            epoch = ['2000.0']*len(target_names_list)
+        
+        # iterate over entries in the parsed table
+        for ei, _ in enumerate(table):            
             # target name must be unique! check it and skip entry if necessary:
-            if entry[0] in targetNames:
+            if target_names_list[ei] in targetNames:
                 continue
-            
             # Ordnung muss sein!
             target = OrderedDict([('program_number',program.number),
                       ('number',str(max_number+ei+1)),
-                      ('name',entry[0]), ('time_critical_flag','0'),
+                      ('name',str(target_names_list[ei])), \
+                      ('time_critical_flag','0'),
                       ('visited_times_for_completion','1'),
                       ('seeing_limit',''), ('visited_times','0'), ('done','0'),
-                      ('cadence','0'), ('comment',entry[-1][1:-1]),
+                      ('cadence','0'), ('comment',str(comment[ei])),
                       ('Object',[])])
             target['Object'].append(OrderedDict([('number','1'), 
-                                 ('RA',entry[1]), ('dec',entry[2]),
-                                 ('epoch',entry[3]), ('magnitude',entry[4]),
+                                 ('RA',ra[ei]), ('dec',dec[ei]),
+                                 ('epoch',epoch[ei]), ('magnitude',mag[ei]),
                                  ('hour_angle_limit',''), ('done','0'),
                                  ('Observation',[])]))
             for oi, obj in enumerate(target['Object']):
@@ -562,7 +645,8 @@ class xmlTree(object):
             targets_added += 1
                 
         # update program number of targets!!
-        self.dumpProgram(program.name, program.number, program.person_name, \
+        self.dumpProgram(program.number, \
+                program.name, program.number, program.person_name, \
                 program.scientific_importance, \
                 str(int(program.number_of_targets)+targets_added),\
                 program.counter, program.total_observation_time, \
@@ -606,7 +690,7 @@ class Root(object):
                 number = prog_number.split('_')[1]
                 program = [p for p in programs if p.number==number][0]
             except:
-                raise Exception('Program_{:d} not found.'.format(number))
+                raise Exception('Program_{:s} not found.'.format(number))
             targets = xmlT.getTargets(program)
             # populate template
             tmpl = env.get_template('targets.html')
@@ -662,28 +746,31 @@ class Root(object):
                 
     # save new/edited Program
     @cherrypy.expose
-    def save(self, name=None, number=None, person_name=None, \
+    def save(self, program_number=None, \
+                name=None, number=None, person_name=None, \
                 scientific_importance=None, number_of_targets=None,\
                 counter=None, total_observation_time=None, \
                 total_science_time=None):
         # bad input:
-        if None in (name, number, person_name, \
+        if None in (program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
-                counter, total_observation_time, total_science_time):
+                counter, total_observation_time, total_science_time) or\
+            (name=='' or number=='' or person_name=='' or\
+             scientific_importance==''):
             return {}
         # read in Programs.xml:
         path = self.path_to_queue
         xmlT = xmlTree(path)
         # read in Programs:
         xmlT.getPrograms(programs_xml='Programs.xml')
-        # get program names:
-        xmlT.dumpProgram(name, number, person_name, \
+        # save program:
+        xmlT.dumpProgram(program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
                 counter, total_observation_time, total_science_time)
 
         return {}
         
-    # save new/edited Program
+    # remove new/edited Program
     @cherrypy.expose
     def remove(self, program_name=None):
         # bad input:
@@ -732,12 +819,22 @@ class Root(object):
 #                break
 #            size += len(data)
 
-        # read everything in one go:
-        data = targetList.file.readlines()
-        # skip comments:
-        data = [d for d in data if d[0]!='#']
+#        # read everything in one go:
+#        data = targetList.file.readlines()
+#        # skip comments:
+#        data = [d for d in data if d[0]!='#']
+
+        # let's build an astropy table following Vizier's
+        # column naming convention
         
-        # read in Programs.xml:
+        # is it a VOtable?
+        if targetList.filename[-3:]=='vot':
+            data = parse_single_table(targetList.file)
+        # if not - it must be readable by astropy.io.ascii
+        else:
+            data = ascii.read(targetList.file)
+
+        # load Programs.xml:
         path = self.path_to_queue
         xmlT = xmlTree(path)
         # get entries:
@@ -838,6 +935,8 @@ class Root(object):
         
         cherrypy.log('removed Target_{:s}.xml from Program_{:s}'.\
                         format(target_number, program_number))
+        cherrypy.log('Note that remaining target xml files were ranaimed if '+\
+                'target_number<number_of_targets to keep file numbering order')
         
         return {}
         
@@ -867,24 +966,6 @@ class Program(object):
         return json.dumps(dic)
 
 
-#cherrypy.config.update({'server.socket_host': '127.0.0.1',
-#                         'server.socket_port': 8080,
-#                         'server.thread_pool' : 8,
-#                         '/': {
-#                             'tools.sessions.on': True,
-#                             'tools.staticdir.root': os.path.abspath(os.getcwd())
-#                         },
-#                         '/generator': {
-#                             'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
-#                             'tools.response_headers.on': True,
-#                             'tools.response_headers.headers': \
-#                                             [('Content-Type', 'text/plain')],
-#                         },
-#                         '/static': {
-#                             'tools.staticdir.on': True,
-#                             'tools.staticdir.dir': './public'
-#                         }
-#                        })
 
 if __name__ == '__main__':
 #    cherrypy.quickstart(Root())
@@ -917,6 +998,6 @@ if __name__ == '__main__':
              'tools.auth_digest.key': 'd8765asdf6c787ag333'
          }
     }
-#    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
-    path_to_queue = '/Users/dmitryduev/web/qserv/test/'
+    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
+#    path_to_queue = '/Users/dmitryduev/web/qserv/test/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
