@@ -1011,6 +1011,7 @@ if __name__ == '__main__':
              'tools.auth_digest.key': 'd8765asdf6c787ag333'
          }
     }
-    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
+    path_to_queue = './'
+#    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
 #    path_to_queue = '/Users/dmitryduev/web/qserv/test/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
