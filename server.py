@@ -323,7 +323,14 @@ class xmlTree(object):
         
     def batchEditTargets(self, program, time_critical_flag="", 
                           visited_times_for_completion="", seeing_limit="",
-                          cadence="", obj_epoch="", obj_hour_angle_limit="",
+                          cadence="", obj_epoch="", 
+                          obj_sun_altitude_limit="",
+                          obj_moon_phase_window="",
+                          obj_airmass_limit="",
+                          obj_sun_distance_limit="",
+                          obj_moon_distance_limit="",
+                          obj_sky_brightness_limit="",
+                          obj_hour_angle_limit="",
                           obs_exposure_time="", obs_ao_flag="", 
                           obs_filter_code="", obs_repeat_times=""):
         target_list_xml = ['Target_{:d}.xml'.format(i+1) \
@@ -373,6 +380,48 @@ class xmlTree(object):
                     tag = obj.find('epoch')
                     tag.text = obj_epoch
 
+                if obj_sun_altitude_limit!="":
+                    # does the tag exist? if not, create
+                    if obj.find('sun_altitude_limit') is None:
+                        obj.append(Element('sun_altitude_limit'))
+                    tag = obj.find('sun_altitude_limit')
+                    tag.text = obj_sun_altitude_limit
+                    
+                if obj_moon_phase_window!="":
+                    # does the tag exist? if not, create
+                    if obj.find('moon_phase_window') is None:
+                        obj.append(Element('moon_phase_window'))
+                    tag = obj.find('moon_phase_window')
+                    tag.text = obj_moon_phase_window
+                    
+                if obj_airmass_limit!="":
+                    # does the tag exist? if not, create
+                    if obj.find('airmass_limit') is None:
+                        obj.append(Element('airmass_limit'))
+                    tag = obj.find('airmass_limit')
+                    tag.text = obj_airmass_limit
+                    
+                if obj_sun_distance_limit!="":
+                    # does the tag exist? if not, create
+                    if obj.find('sun_distance_limit') is None:
+                        obj.append(Element('sun_distance_limit'))
+                    tag = obj.find('sun_distance_limit')
+                    tag.text = obj_sun_distance_limit
+                    
+                if obj_moon_distance_limit!="":
+                    # does the tag exist? if not, create
+                    if obj.find('moon_distance_limit') is None:
+                        obj.append(Element('moon_distance_limit'))
+                    tag = obj.find('moon_distance_limit')
+                    tag.text = obj_moon_distance_limit
+                    
+                if obj_sky_brightness_limit!="":
+                    # does the tag exist? if not, create
+                    if obj.find('sky_brightness_limit') is None:
+                        obj.append(Element('sky_brightness_limit'))
+                    tag = obj.find('sky_brightness_limit')
+                    tag.text = obj_sky_brightness_limit
+                    
                 if obj_hour_angle_limit!="":
                     # does the tag exist? if not, create
                     if obj.find('hour_angle_limit') is None:
@@ -608,6 +657,9 @@ class xmlTree(object):
             target['Object'].append(OrderedDict([('number','1'), 
                                  ('RA',ra[ei]), ('dec',dec[ei]),
                                  ('epoch',epoch[ei]), ('magnitude',mag[ei]),
+                                 ('sun_altitude_limit',''), ('moon_phase_window',''),
+                                 ('airmass_limit',''), ('sun_distance_limit',''),
+                                 ('moon_distance_limit',''), ('sky_brightness_limit',''),
                                  ('hour_angle_limit',''), ('done','0'),
                                  ('Observation',[])]))
             for oi, obj in enumerate(target['Object']):
@@ -810,7 +862,14 @@ class Root(object):
     @cherrypy.expose
     def targetBatchUpdate(self, program_number, time_critical_flag="", 
                           visited_times_for_completion="", seeing_limit="",
-                          cadence="", obj_epoch="", obj_hour_angle_limit="",
+                          cadence="", obj_epoch="", 
+                          obj_sun_altitude_limit="",
+                          obj_moon_phase_window="",
+                          obj_airmass_limit="",
+                          obj_sun_distance_limit="",
+                          obj_moon_distance_limit="",
+                          obj_sky_brightness_limit="",
+                          obj_hour_angle_limit="",
                           obs_exposure_time="", obs_ao_flag="", 
                           obs_filter_code="", obs_repeat_times=""):
         
@@ -824,7 +883,10 @@ class Root(object):
         
         xmlT.batchEditTargets(program, time_critical_flag, 
                           visited_times_for_completion, seeing_limit,
-                          cadence, obj_epoch, obj_hour_angle_limit,
+                          cadence, obj_epoch, obj_sun_altitude_limit,
+                          obj_moon_phase_window, obj_airmass_limit,
+                          obj_sun_distance_limit, obj_moon_distance_limit,
+                          obj_sky_brightness_limit, obj_hour_angle_limit,
                           obs_exposure_time, obs_ao_flag, 
                           obs_filter_code, obs_repeat_times)
         
@@ -870,6 +932,7 @@ class Root(object):
     @cherrypy.expose
     def targetUpdate(self, **kargs):
         '''
+            Update Target xml file
         '''
         # read in Programs.xml:
         path = self.path_to_queue
@@ -910,6 +973,18 @@ class Root(object):
                 ('dec_rate',kargs['obj_dec_rate_{:s}'.format(obj_numbers[nOj])]),\
                 ('epoch',kargs['obj_epoch_{:s}'.format(obj_numbers[nOj])]),\
                 ('magnitude',kargs['obj_magnitude_{:s}'.format(obj_numbers[nOj])]),\
+                ('sun_altitude_limit',\
+                    kargs['obj_sun_altitude_limit_{:s}'.format(obj_numbers[nOj])]),\
+                ('moon_phase_window',\
+                    kargs['obj_moon_phase_window_{:s}'.format(obj_numbers[nOj])]),\
+                ('airmass_limit',\
+                    kargs['obj_airmass_limit_{:s}'.format(obj_numbers[nOj])]),\
+                ('sun_distance_limit',\
+                    kargs['obj_sun_distance_limit_{:s}'.format(obj_numbers[nOj])]),\
+                ('moon_distance_limit',\
+                    kargs['obj_moon_distance_limit_{:s}'.format(obj_numbers[nOj])]),\
+                ('sky_brightness_limit',\
+                    kargs['obj_sky_brightness_limit_{:s}'.format(obj_numbers[nOj])]),\
                 ('hour_angle_limit',\
                     kargs['obj_hour_angle_limit_{:s}'.format(obj_numbers[nOj])]),\
                 ('done',kargs['obj_done_{:s}'.format(obj_numbers[nOj])]),\

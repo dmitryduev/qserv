@@ -42,8 +42,8 @@
         .table-condensed>thead>tr>th, .table-condensed>tbody>tr>th, 
         .table-condensed>tfoot>tr>th, .table-condensed>thead>tr>td, 
         .table-condensed>tbody>tr>td, .table-condensed>tfoot>tr>td {
-            padding: 2px;
-            font-size: 10px;
+            padding: 1px;
+            font-size: 9px;
         }
         .panel-heading-sm{
             font-size: 11px;
@@ -269,6 +269,46 @@
                         'placeholder=\'18.0\' name=\'obj_magnitude_'+
                         n + '\'>'+
                 '</div>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>sun altitude limit</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_sun_altitude_limit_'+
+                        n + '\'>'+
+                '</div>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>moon phase window</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_moon_phase_window_'+
+                        n + '\'>'+
+                '</div>'+
+            '</div>'+
+            '<div class=\'form-group \'>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>airmass limit</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_airmass_limit_'+
+                        n + '\'>'+
+                '</div>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>sun distance limit</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_sun_distance_limit_'+
+                        n + '\'>'+
+                '</div>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>moon distance limit</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_moon_distance_limit_'+
+                        n + '\'>'+
+                '</div>'+
+                '<label class=\'col-md-1 control-label input-label-xs\'>sky brightness limit</label>'+
+                '<div class=\'col-md-2\'>'+
+                    '<input type=\'text\' class=\'form-control input-xs\' '+
+                        'name=\'obj_sky_brightness_limit_'+
+                        n + '\'>'+
+                '</div>'+
+            '</div>'+
+            '<div class=\'form-group \'>'+
                 '<label class=\'col-md-1 control-label input-label-xs\'>hour angle limit</label>'+
                 '<div class=\'col-md-2\'>'+
                     '<input type=\'text\' class=\'form-control input-xs\' '+
@@ -421,6 +461,9 @@
                         for (ii=1; ii<=nObj; ii++) {
                             {% for key in ('RA', 'dec', 'ra_rate', 'dec_rate',
                                             'magnitude', 'epoch',
+                                            'sun_altitude_limit', 'moon_phase_window',
+                                            'airmass_limit', 'sun_distance_limit',
+                                            'moon_distance_limit', 'sky_brightness_limit',
                                             'hour_angle_limit', 'done') %}
                                 $('#template2Form').find("[name=obj_{{key}}_"+ii+
                                     "]").val(data["Object"][ii-1]["{{key}}"]);
@@ -527,7 +570,11 @@
                     'seeing_limit','visited_times','done','cadence',
                     'comment','obj_number','obj_RA','obj_dec',
                     'obj_ra_rate','obj_dec_rate','obj_epoch',
-                    'obj_magnitude','obj_hour_angle_limit','obj_done',
+                    'obj_magnitude','obj_sun_altitude_limit',
+                    'obj_moon_phase_window','obj_airmass_limit',
+                    'obj_sun_distance_limit','obj_moon_distance_limit',
+                    'obj_sky_brightness_limit',
+                    'obj_hour_angle_limit','obj_done',
                     'obs_number','obs_exposure_time','obs_ao_flag',
                     'obs_filter_code','obs_camera_mode','obs_repeat_times',
                     'obs_repeated','obs_done')%}
@@ -548,7 +595,10 @@
                 <td style="border-right: solid 1px #DDDDDD;" name="comment">
                     {{ target['comment'] | replace(" ", " ") }}</td>
                 {% for key in ('number','RA','dec','ra_rate','dec_rate',
-                                'epoch','magnitude','hour_angle_limit','done')%}
+                                'epoch','magnitude', 'sun_altitude_limit',
+                                'moon_phase_window', 'airmass_limit',
+                                'sun_distance_limit', 'moon_distance_limit',
+                                'sky_brightness_limit', 'hour_angle_limit','done')%}
                 <td style="border-right: solid 1px #DDDDDD;" name=obj_"{{ key }}">
                     {% for object in target['Object'] %}
                         {{ object[key] }}
@@ -599,6 +649,9 @@
 
     {% for key in ('time_critical_flag','visited_times_for_completion',
                    'seeing_limit','cadence','obj_epoch',
+                   'obj_sun_altitude_limit', 'obj_moon_phase_window', 
+                   'obj_airmass_limit', 'obj_sun_distance_limit', 
+                   'obj_moon_distance_limit', 'obj_sky_brightness_limit', 
                    'obj_hour_angle_limit','obs_exposure_time',
                    'obs_ao_flag','obs_filter_code','obs_repeat_times') %}
     <div class="form-group">
