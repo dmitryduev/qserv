@@ -296,8 +296,7 @@ class xmlTree(object):
                         else:
                             obs = {}
                             for data_obs in data_obj:
-                                obs[data_obs.tag]\
-                                            = data_obs.text
+                                obs[data_obs.tag] = data_obs.text
                             obj['Observation'].append(obs)
                     targ['Object'].append(obj)
 
@@ -442,7 +441,7 @@ class xmlTree(object):
         '''
             Edit or create target xml file
         '''
-        if target_number=="":
+        if target_number=='':
             targets_added = 1
             # program not empty?
             if int(program.number_of_targets)!=0:
@@ -454,7 +453,7 @@ class xmlTree(object):
             else:
                 max_number = 0
             target_number = max_number+1
-            target["number"] = str(target_number)
+            target['number'] = str(target_number)
         else:
             targets_added = 0
             target_number = int(target_number)
@@ -704,9 +703,18 @@ class Root(object):
                 program = [p for p in programs if p.number==number][0]
             except:
                 raise Exception('Program_{:s} not found.'.format(number))
+#            from time import time as _time
+#            tic = _time()
             targets = xmlT.getTargets(program)
+#            print 'getting targets took {:f} seconds'.format(_time()-tic)
             # populate template
+#            tic = _time()
             tmpl = env.get_template('targets.html')
+#            print 'loading template took {:f} seconds'.format(_time()-tic)
+#            tic = _time()
+#            tmpl.render(targets=targets, programName=program.name,
+#                               programNumber=program.number)
+#            print 'rendering template took {:f} seconds'.format(_time()-tic)
             return tmpl.render(targets=targets, programName=program.name,
                                programNumber=program.number)
     
@@ -898,7 +906,7 @@ class Root(object):
                 ('number',nOj+1),\
                 ('RA',kargs['obj_RA_{:s}'.format(obj_numbers[nOj])]),\
                 ('dec',kargs['obj_dec_{:s}'.format(obj_numbers[nOj])]),\
-                ('RA_rate',kargs['obj_RA_rate_{:s}'.format(obj_numbers[nOj])]),\
+                ('ra_rate',kargs['obj_ra_rate_{:s}'.format(obj_numbers[nOj])]),\
                 ('dec_rate',kargs['obj_dec_rate_{:s}'.format(obj_numbers[nOj])]),\
                 ('epoch',kargs['obj_epoch_{:s}'.format(obj_numbers[nOj])]),\
                 ('magnitude',kargs['obj_magnitude_{:s}'.format(obj_numbers[nOj])]),\
@@ -1011,7 +1019,7 @@ if __name__ == '__main__':
              'tools.auth_digest.key': 'd8765asdf6c787ag333'
          }
     }
-    path_to_queue = './'
-#    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
+#    path_to_queue = './'
+    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
 #    path_to_queue = '/Users/dmitryduev/web/qserv/test/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)

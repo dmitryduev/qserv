@@ -246,7 +246,7 @@
                 '<label class=\'col-md-1 control-label input-label-xs\'>RA rate</label>'+
                 '<div class=\'col-md-2\'>'+
                     '<input type=\'text\' class=\'form-control input-xs\' '+
-                        'name=\'obj_RA_rate_'+
+                        'name=\'obj_ra_rate_'+
                         n + '\'>'+
                 '</div>'+
                 '<label class=\'col-md-1 control-label input-label-xs\'>dec rate</label>'+
@@ -419,7 +419,7 @@
                         $('[name="cadence"]').val(data["cadence"]);
                         $('[name="comment"]').val(data["comment"]);
                         for (ii=1; ii<=nObj; ii++) {
-                            {% for key in ('RA', 'dec', 'RA_rate', 'dec_rate',
+                            {% for key in ('RA', 'dec', 'ra_rate', 'dec_rate',
                                             'magnitude', 'epoch',
                                             'hour_angle_limit', 'done') %}
                                 $('#template2Form').find("[name=obj_{{key}}_"+ii+
@@ -526,7 +526,7 @@
                     'time_critical_flag','visited_times_for_completion',
                     'seeing_limit','visited_times','done','cadence',
                     'comment','obj_number','obj_RA','obj_dec',
-                    'obj_RA_rate','obj_dec_rate','obj_epoch',
+                    'obj_ra_rate','obj_dec_rate','obj_epoch',
                     'obj_magnitude','obj_hour_angle_limit','obj_done',
                     'obs_number','obs_exposure_time','obs_ao_flag',
                     'obs_filter_code','obs_camera_mode','obs_repeat_times',
@@ -547,7 +547,7 @@
                 {% endfor %}
                 <td style="border-right: solid 1px #DDDDDD;" name="comment">
                     {{ target['comment'] | replace(" ", " ") }}</td>
-                {% for key in ('number','RA','dec','RA_rate','dec_rate',
+                {% for key in ('number','RA','dec','ra_rate','dec_rate',
                                 'epoch','magnitude','hour_angle_limit','done')%}
                 <td style="border-right: solid 1px #DDDDDD;" name=obj_"{{ key }}">
                     {% for object in target['Object'] %}
