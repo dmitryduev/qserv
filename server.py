@@ -142,7 +142,7 @@ class xmlTree(object):
 
     def dumpProgram(self, program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
-                counter, total_observation_time, total_science_time):
+                counter, total_observation_time, total_science_time, new='0'):
         '''
         '''
         try:
@@ -150,8 +150,13 @@ class xmlTree(object):
         except:
             self.getPrograms()
         programNumbers = self.getProgramNumbers()
-        
-        if program_number not in programNumbers or program_number=='':
+
+        # trying to add a program with an already existing number? atata!!
+        if number in programNumbers and new=='1':
+            return False
+
+        if (program_number not in programNumbers or program_number=='') and \
+            new=='1':
             # add new program
             self.Programs.append(Program(number, name, person_name, \
                  scientific_importance, number_of_targets, counter, \
@@ -164,11 +169,14 @@ class xmlTree(object):
                  scientific_importance, number_of_targets, counter, \
                  total_observation_time, total_science_time)
         
-        # rename folder containing target xml files
+        # rename folder containing target xml files if program_number changed
         if program_number not in ('', number):
             os.rename(os.path.join(self.path, \
                                        'Program_{:s}'.format(program_number)),\
                       os.path.join(self.path, 'Program_{:s}'.format(number)))
+            # update all target program_numbers
+            
+            self.batchEditTargets(self.Programs[ind], program_number=number)
         
         # build new xml and write it to disk:
         tree = self.buildProgramXMLtree(self.Programs)
@@ -332,7 +340,8 @@ class xmlTree(object):
                           obj_sky_brightness_limit="",
                           obj_hour_angle_limit="",
                           obs_exposure_time="", obs_ao_flag="", 
-                          obs_filter_code="", obs_repeat_times=""):
+                          obs_filter_code="", obs_repeat_times="",
+                          program_number=""):
         target_list_xml = ['Target_{:d}.xml'.format(i+1) \
                             for i in range(int(program.number_of_targets))]
         
@@ -342,6 +351,13 @@ class xmlTree(object):
             tree = ET.parse(target_xml_path)
             root = tree.getroot()
 
+            if program_number!="":
+                # does the tag exist? if not, create
+                if root.find('program_number') is None:
+                    root.append(Element('program_number'))
+                tag = root.find('program_number')
+                tag.text = program_number
+                
             if time_critical_flag!="":
                 # does the tag exist? if not, create
                 if root.find('time_critical_flag') is None:
@@ -645,9 +661,13 @@ class xmlTree(object):
             # target name must be unique! check it and skip entry if necessary:
             if target_names_list[ei] in targetNames:
                 continue
+            else:
+                # count added targets:
+                targets_added += 1
+
             # Ordnung muss sein!
             target = OrderedDict([('program_number',program.number),
-                      ('number',str(max_number+ei+1)),
+                      ('number',str(max_number+targets_added)),
                       ('name',str(target_names_list[ei])), \
                       ('time_critical_flag','0'),
                       ('visited_times_for_completion','1'),
@@ -685,15 +705,13 @@ class xmlTree(object):
             target_xml_path = os.path.join(self.path, \
                             'Program_{:s}'.format(program.number), 
                             'Target_{:d}.xml'.format(\
-                                    int(program.number_of_targets)+ei+1))
+                                 int(program.number_of_targets)+targets_added))
 #            print target_xml_path
             with open(target_xml_path, 'w') as f:
                 for line in target_xml[1:-1]:
                     f.write('{:s}\n'.format(line))
                 f.write('{:s}'.format(target_xml[-1]))
-                
-            # count added targets:
-            targets_added += 1
+            
                 
         # update program number of targets!!
         self.dumpProgram(program.number, \
@@ -823,11 +841,11 @@ class Root(object):
                 name=None, number=None, person_name=None, \
                 scientific_importance=None, number_of_targets=None,\
                 counter=None, total_observation_time=None, \
-                total_science_time=None):
+                total_science_time=None, new=None):
         # bad input:
         if None in (program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
-                counter, total_observation_time, total_science_time) or\
+                counter, total_observation_time, total_science_time, new) or\
             (name=='' or number=='' or person_name=='' or\
              scientific_importance==''):
             return {}
@@ -837,9 +855,16 @@ class Root(object):
         # read in Programs:
         xmlT.getPrograms(programs_xml='Programs.xml')
         # save program:
-        xmlT.dumpProgram(program_number, name, number, person_name, \
+        status = xmlT.dumpProgram(program_number, name, number, person_name, \
                 scientific_importance, number_of_targets,\
-                counter, total_observation_time, total_science_time)
+                counter, total_observation_time, total_science_time, new)
+                
+        if status==False:
+            cherrypy.log('Failed to create program. Program_{:s} already exists'.\
+                    format(number))
+        else:
+            cherrypy.log('Succesfully processed Program_{:s}'.\
+                    format(number))
 
         return {}
         
