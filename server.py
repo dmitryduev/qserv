@@ -24,11 +24,25 @@ from collections import OrderedDict
 from dicttoxml import dicttoxml
 
 import astropy
+from astropy.table import Table
 from astropy.io.votable import parse_single_table
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np
+
+def parse_csv(csv):
+    f_lines = csv.read()
+    f_lines = [l for l in f_lines.split('\r') if len(l)>0]
+    colnames = [l for l in f_lines[0].split(',') if len(l)>0]
+    data_raw = np.array([l.split(',') for l in f_lines[1:]])
+
+    data_od = OrderedDict()
+    for i,c in enumerate(colnames):
+        data_od[c] = data_raw[:,i]
+#    data = Table({c:data_raw[:,i] for i,c in enumerate(colnames)})
+    data = Table(data_od, names=colnames)
+    return data
 
 def prettify(elem):
     """
@@ -627,7 +641,9 @@ class xmlTree(object):
                         not 'degree' in table['RAJ2000'].description:
                     raise Exception('RAJ2000 must be in degrees!')
                 else:
-                    crd = SkyCoord(ra=ra, dec=dec, \
+                    ra_deg = table['RAJ2000']
+                    dec_deg = table['DEJ2000']
+                    crd = SkyCoord(ra=ra_deg, dec=dec_deg, \
                         unit=(u.deg, u.deg), frame='icrs').to_string('hmsdms')
                     crd_str = np.array([c.split() for c in crd])
                     ra = [ra.replace('h',':').replace('m',':').replace('s','')\
@@ -644,15 +660,15 @@ class xmlTree(object):
             comment = ['']*len(target_names_list)
         # Vmag/Vemag/mag
         if 'Vmag' in table.colnames:
-            mag = table['Vmag']
+            mag = table['Vmag'].data.tolist()
         elif 'Vemag' in table.colnames:
-            mag = table['Vemag']
+            mag = table['Vemag'].data.tolist()
         elif 'mag' in table.colnames:
-            mag = table['mag']
-            
+            mag = table['mag'].data.tolist()
+
         # epoch should be J2000?
         if 'epoch' in table.colnames:
-            epoch = table['epoch']
+            epoch = table['epoch'].data.tolist()
         else:
             epoch = ['2000.0']*len(target_names_list)
         
@@ -938,6 +954,9 @@ class Root(object):
         # is it a VOtable?
         if targetList.filename[-3:]=='vot':
             data = parse_single_table(targetList.file)
+        # Becky, is that you?
+        elif targetList.filename[-3:]=='csv':
+            data = parse_csv(targetList.file)
         # if not - it must be readable by astropy.io.ascii
         else:
             data = ascii.read(targetList.file)
