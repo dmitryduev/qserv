@@ -9,7 +9,6 @@ import cherrypy
 from cherrypy.lib import auth_digest
 
 from jinja2 import Environment, FileSystemLoader
-env = Environment(loader=FileSystemLoader('templates'))
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -31,6 +30,28 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np
 
+
+env = Environment(loader=FileSystemLoader('templates'))
+
+
+def getModefromMag(mag):
+    '''
+        VICD mode depending on the object magnitude
+    '''
+    m = float(mag)
+    if m < 8:
+        mode = '6'
+    elif 8 <= m < 10:
+        mode = '7'
+    elif 10 <= m < 12:
+        mode = '8'
+    elif 12 <= m < 13:
+        mode = '9'
+    elif m >= 13:
+        mode = '10'
+    return mode
+
+
 def parse_csv(csv):
     f_lines = csv.read()
     f_lines = [l for l in f_lines.split('\r') if len(l)>0]
@@ -44,6 +65,7 @@ def parse_csv(csv):
     data = Table(data_od, names=colnames)
     return data
 
+
 def prettify(elem):
     """
         Return a pretty-printed XML string for the Element.
@@ -51,6 +73,7 @@ def prettify(elem):
     rough_string = ET.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="\t")
+
 
 class xmlTree(object):
     '''
@@ -86,13 +109,13 @@ class xmlTree(object):
                             str(self.getProgramNumberOfTargets(prog['number']))
 
             # build program object:
-            p = Program(number=prog['number'],\
-                         name=prog['name'],\
-                         person_name=prog['person_name'],\
-                         scientific_importance=prog['scientific_importance'],\
-                         number_of_targets=number_of_targets,\
-                         counter=prog['counter'],\
-                         total_observation_time=prog['total_observation_time'],\
+            p = Program(number=prog['number'],
+                         name=prog['name'],
+                         person_name=prog['person_name'],
+                         scientific_importance=prog['scientific_importance'],
+                         number_of_targets=number_of_targets,
+                         counter=prog['counter'],
+                         total_observation_time=prog['total_observation_time'],
                          total_science_time=prog['total_science_time'])
             # now append:
             self.Programs.append(p)
@@ -109,16 +132,18 @@ class xmlTree(object):
             tree = self.buildProgramXMLtree(self.Programs)
 
             with open(os.path.join(self.path, 'Programs.xml'), 'w') as f:
-                f.write(minidom.parseString(ET.tostring(tree.getroot(), \
-                                                'utf-8')).toprettyxml(indent="\t"))
+                contents = minidom.parseString(ET.tostring(tree.getroot(),
+                                                'utf-8')).toprettyxml(indent="\t")
+                contents = contents.replace('<?xml version="1.0" ?>\n', '')
+                f.write(contents)
         
         return self.Programs
 
     def getProgramNumberOfTargets(self, program_number):
-        target_xml_path = os.path.join(self.path, \
+        target_xml_path = os.path.join(self.path,
                             'Program_{:s}'.format(program_number))
-        pnot = len([f for f in os.listdir(target_xml_path) \
-                        if 'Target_' in f and f[0]!='.'])
+        pnot = len([f for f in os.listdir(target_xml_path)
+                        if 'Target_' in f and f[0] != '.'])
         
         return pnot
                          
@@ -130,8 +155,11 @@ class xmlTree(object):
 
     @staticmethod
     def buildProgramXMLtree(programs):
-        '''
-        '''
+        """
+
+        :param programs:
+        :return:
+        """
         root = ET.Element("root")
         for program in programs:
             prog = ET.SubElement(root, "Program")
@@ -153,12 +181,23 @@ class xmlTree(object):
         
         return tree
 
-
-    def dumpProgram(self, program_number, name, number, person_name, \
-                scientific_importance, number_of_targets,\
+    def dumpProgram(self, program_number, name, number, person_name,
+                scientific_importance, number_of_targets,
                 counter, total_observation_time, total_science_time, new='0'):
-        '''
-        '''
+        """
+
+        :param program_number:
+        :param name:
+        :param number:
+        :param person_name:
+        :param scientific_importance:
+        :param number_of_targets:
+        :param counter:
+        :param total_observation_time:
+        :param total_science_time:
+        :param new:
+        :return:
+        """
         try:
             self.Programs
         except:
@@ -170,23 +209,23 @@ class xmlTree(object):
             return False
 
         if (program_number not in programNumbers or program_number=='') and \
-            new=='1':
+            new == '1':
             # add new program
-            self.Programs.append(Program(number, name, person_name, \
-                 scientific_importance, number_of_targets, counter, \
+            self.Programs.append(Program(number, name, person_name,
+                 scientific_importance, number_of_targets, counter,
                  total_observation_time, total_science_time))
         else:
             # change existing
-            ind = [i for i,p in enumerate(self.Programs) \
-                    if p.number==program_number][0]
-            self.Programs[ind] = Program(number, name, person_name, \
-                 scientific_importance, number_of_targets, counter, \
+            ind = [i for i, p in enumerate(self.Programs)
+                    if p.number == program_number][0]
+            self.Programs[ind] = Program(number, name, person_name,
+                 scientific_importance, number_of_targets, counter,
                  total_observation_time, total_science_time)
         
         # rename folder containing target xml files if program_number changed
         if program_number not in ('', number):
-            os.rename(os.path.join(self.path, \
-                                       'Program_{:s}'.format(program_number)),\
+            os.rename(os.path.join(self.path,
+                                       'Program_{:s}'.format(program_number)),
                       os.path.join(self.path, 'Program_{:s}'.format(number)))
             # update all target program_numbers
             
@@ -197,8 +236,10 @@ class xmlTree(object):
         
         # make is pretty:
         with open(os.path.join(self.path, 'Programs.xml'), 'w') as f:
-            f.write(minidom.parseString(ET.tostring(tree.getroot(), \
-                                            'utf-8')).toprettyxml(indent="\t"))
+            contents = minidom.parseString(ET.tostring(tree.getroot(),
+                                                'utf-8')).toprettyxml(indent="\t")
+            contents = contents.replace('<?xml version="1.0" ?>\n', '')
+            f.write(contents)
         
         # create a directory for storing target xml-files
         target_xml_dir = os.path.join(self.path, 'Program_{:s}'.format(number))
@@ -211,10 +252,13 @@ class xmlTree(object):
         return True
         
     def removeProgram(self, name=None):
-        '''
-            Remove a program
-        '''
-        if name is None or name=='':
+        """ Remove a program
+
+        :param name:
+        :return:
+        """
+
+        if name is None or name == '':
             return {}
         
         try:
@@ -224,7 +268,7 @@ class xmlTree(object):
         
         # remove from self.Programs and Programs.xml
         try:
-            program = [p for p in self.Programs if p.name==name][0]
+            program = [p for p in self.Programs if p.name == name][0]
             self.Programs.remove(program)
         except:
             return {}
@@ -233,11 +277,15 @@ class xmlTree(object):
         tree = self.buildProgramXMLtree(self.Programs)
 
         with open(os.path.join(self.path, 'Programs.xml'), 'w') as f:
-            f.write(minidom.parseString(ET.tostring(tree.getroot(), \
-                                            'utf-8')).toprettyxml(indent="\t"))
+            contents = minidom.parseString(ET.tostring(tree.getroot(),
+                                                'utf-8')).toprettyxml(indent="\t")
+            contents = contents.replace('<?xml version="1.0" ?>\n', '')
+            f.write(contents)
+            # f.write(minidom.parseString(ET.tostring(tree.getroot(),
+            #                                 'utf-8')).toprettyxml(indent="\t"))
         
         # remove dir Program_number with target xml files
-        target_xml_dir = os.path.join(self.path, \
+        target_xml_dir = os.path.join(self.path,
                                         'Program_{:s}'.format(program.number))
         if os.path.exists(target_xml_dir):
             shutil.rmtree(target_xml_dir)
@@ -248,11 +296,15 @@ class xmlTree(object):
         return {}
         
     def removeTarget(self, program_number=None, target_number=None):
-        '''
-            Remove a target from a program
-        '''
-        if program_number is None or program_number=='' or\
-            target_number is None or target_number=='':
+        """ Remove a target from a program
+
+        :param program_number:
+        :param target_number:
+        :return:
+        """
+
+        if program_number is None or program_number == '' or\
+            target_number is None or target_number == '':
             return {}
         
         try:
@@ -262,7 +314,7 @@ class xmlTree(object):
         program = [p for p in self.Programs if p.number==program_number][0]
         
         target_xml = 'Target_{:s}.xml'.format(target_number)
-        target_xml_path = os.path.join(self.path, \
+        target_xml_path = os.path.join(self.path,
                             'Program_{:s}'.format(program_number), target_xml)
         if os.path.exists(target_xml_path):
             os.remove(target_xml_path)
@@ -270,10 +322,10 @@ class xmlTree(object):
         # rename remaining xml files:
         for i in range(int(target_number)+1, int(program.number_of_targets)+1):
             target_xml_old = 'Target_{:d}.xml'.format(i)
-            target_xml_old_path = os.path.join(self.path, \
+            target_xml_old_path = os.path.join(self.path,
                         'Program_{:s}'.format(program_number), target_xml_old)
             target_xml_new = 'Target_{:d}.xml'.format(i-1)
-            target_xml_new_path = os.path.join(self.path, \
+            target_xml_new_path = os.path.join(self.path,
                         'Program_{:s}'.format(program_number), target_xml_new)
             os.rename(target_xml_old_path, target_xml_new_path)
         
@@ -288,7 +340,7 @@ class xmlTree(object):
             Get a list of targets (each being a dict) for a given program
         '''
         if target_list_xml is None:
-            target_list_xml = ['Target_{:d}.xml'.format(i+1) \
+            target_list_xml = ['Target_{:d}.xml'.format(i+1)
                                 for i in range(int(program.number_of_targets))]
         
         # list for keeping track of targets for each program:
@@ -300,7 +352,7 @@ class xmlTree(object):
         self.Targets[program.name] = []
         
         for target_xml in target_list_xml:
-            tree = ET.parse(os.path.join(self.path, \
+            tree = ET.parse(os.path.join(self.path,
                             'Program_{:s}'.format(program.number), target_xml))
             root = tree.getroot()
         
@@ -326,13 +378,14 @@ class xmlTree(object):
 #        print 'N_targ = {:d}'.format(len(self.Targets[program.name]))
         return self.Targets[program.name]
 
-
     def getTargetNames(self, program):
-        '''
-            Get target names for program
-            
+        """ Get target names for program
+
             Each target must have a unique name!
-        '''
+
+        :param program:
+        :return:
+        """
         try:
             self.Targets[program.name]
         except:
@@ -341,11 +394,10 @@ class xmlTree(object):
         targetNames = [t['name'] for t in self.Targets[program.name]]
         
         return targetNames
-        
-        
+
     def batchEditTargets(self, program, time_critical_flag="", 
                           visited_times_for_completion="", seeing_limit="",
-                          cadence="", obj_epoch="", 
+                          cadence="", obj_solar_system="", obj_epoch="",
                           obj_sun_altitude_limit="",
                           obj_moon_phase_window="",
                           obj_airmass_limit="",
@@ -354,46 +406,47 @@ class xmlTree(object):
                           obj_sky_brightness_limit="",
                           obj_hour_angle_limit="",
                           obs_exposure_time="", obs_ao_flag="", 
-                          obs_filter_code="", obs_repeat_times="",
+                          obs_filter_code="", obs_camera_mode="",
+                          obs_repeat_times="",
                           program_number=""):
-        target_list_xml = ['Target_{:d}.xml'.format(i+1) \
+        target_list_xml = ['Target_{:d}.xml'.format(i+1)
                             for i in range(int(program.number_of_targets))]
         
         for target_xml in target_list_xml:
-            target_xml_path = os.path.join(self.path, \
+            target_xml_path = os.path.join(self.path,
                             'Program_{:s}'.format(program.number), target_xml)
             tree = ET.parse(target_xml_path)
             root = tree.getroot()
 
-            if program_number!="":
+            if program_number != "":
                 # does the tag exist? if not, create
                 if root.find('program_number') is None:
                     root.append(Element('program_number'))
                 tag = root.find('program_number')
                 tag.text = program_number
                 
-            if time_critical_flag!="":
+            if time_critical_flag != "":
                 # does the tag exist? if not, create
                 if root.find('time_critical_flag') is None:
                     root.append(Element('time_critical_flag'))
                 tag = root.find('time_critical_flag')
                 tag.text = time_critical_flag
                 
-            if visited_times_for_completion!="":
+            if visited_times_for_completion != "":
                 # does the tag exist? if not, create
                 if root.find('visited_times_for_completion') is None:
                     root.append(Element('visited_times_for_completion'))
                 tag = root.find('visited_times_for_completion')
                 tag.text = visited_times_for_completion
                 
-            if seeing_limit!="":
+            if seeing_limit != "":
                 # does the tag exist? if not, create
                 if root.find('seeing_limit') is None:
                     root.append(Element('seeing_limit'))
                 tag = root.find('seeing_limit')
                 tag.text = seeing_limit
                 
-            if cadence!="":
+            if cadence != "":
                 # does the tag exist? if not, create
                 if root.find('cadence') is None:
                     root.append(Element('cadence'))
@@ -403,56 +456,63 @@ class xmlTree(object):
             # iterate over Objects:
             objs = root.findall('Object')
             for obj in objs:
-                if obj_epoch!="":
+                if obj_solar_system != "":
+                    # does the tag exist? if not, create
+                    if obj.find('solar_system') is None:
+                        obj.append(Element('solar_system'))
+                    tag = obj.find('solar_system')
+                    tag.text = obj_solar_system
+
+                if obj_epoch != "":
                     # does the tag exist? if not, create
                     if obj.find('epoch') is None:
                         obj.append(Element('epoch'))
                     tag = obj.find('epoch')
                     tag.text = obj_epoch
 
-                if obj_sun_altitude_limit!="":
+                if obj_sun_altitude_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('sun_altitude_limit') is None:
                         obj.append(Element('sun_altitude_limit'))
                     tag = obj.find('sun_altitude_limit')
                     tag.text = obj_sun_altitude_limit
                     
-                if obj_moon_phase_window!="":
+                if obj_moon_phase_window != "":
                     # does the tag exist? if not, create
                     if obj.find('moon_phase_window') is None:
                         obj.append(Element('moon_phase_window'))
                     tag = obj.find('moon_phase_window')
                     tag.text = obj_moon_phase_window
                     
-                if obj_airmass_limit!="":
+                if obj_airmass_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('airmass_limit') is None:
                         obj.append(Element('airmass_limit'))
                     tag = obj.find('airmass_limit')
                     tag.text = obj_airmass_limit
                     
-                if obj_sun_distance_limit!="":
+                if obj_sun_distance_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('sun_distance_limit') is None:
                         obj.append(Element('sun_distance_limit'))
                     tag = obj.find('sun_distance_limit')
                     tag.text = obj_sun_distance_limit
                     
-                if obj_moon_distance_limit!="":
+                if obj_moon_distance_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('moon_distance_limit') is None:
                         obj.append(Element('moon_distance_limit'))
                     tag = obj.find('moon_distance_limit')
                     tag.text = obj_moon_distance_limit
                     
-                if obj_sky_brightness_limit!="":
+                if obj_sky_brightness_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('sky_brightness_limit') is None:
                         obj.append(Element('sky_brightness_limit'))
                     tag = obj.find('sky_brightness_limit')
                     tag.text = obj_sky_brightness_limit
                     
-                if obj_hour_angle_limit!="":
+                if obj_hour_angle_limit != "":
                     # does the tag exist? if not, create
                     if obj.find('hour_angle_limit') is None:
                         obj.append(Element('hour_angle_limit'))
@@ -462,34 +522,40 @@ class xmlTree(object):
                 # iterate over Observations:
                 obss = obj.findall('Observation')
                 for obs in obss:
-                    if obs_exposure_time!="":
+                    if obs_exposure_time != "":
                         # does the tag exist? if not, create
                         if obs.find('exposure_time') is None:
                             obs.append(Element('exposure_time'))
                         tag = obs.find('exposure_time')
                         tag.text = obs_exposure_time
 
-                    if obs_ao_flag!="":
+                    if obs_ao_flag != "":
                         # does the tag exist? if not, create
                         if obs.find('ao_flag') is None:
                             obs.append(Element('ao_flag'))
                         tag = obs.find('ao_flag')
                         tag.text = obs_ao_flag
                 
-                    if obs_filter_code!="":
+                    if obs_filter_code != "":
                         # does the tag exist? if not, create
                         if obs.find('filter_code') is None:
                             obs.append(Element('filter_code'))
                         tag = obs.find('filter_code')
                         tag.text = obs_filter_code
+                        
+                    if obs_camera_mode != "":
+                        # does the tag exist? if not, create
+                        if obs.find('camera_mode') is None:
+                            obs.append(Element('camera_mode'))
+                        tag = obs.find('camera_mode')
+                        tag.text = obs_camera_mode
                 
-                    if obs_repeat_times!="":
+                    if obs_repeat_times != "":
                         # does the tag exist? if not, create
                         if obs.find('repeat_times') is None:
                             obs.append(Element('repeat_times'))
                         tag = obs.find('repeat_times')
                         tag.text = obs_repeat_times
-                
 
             # save updated file:
 #            with open(target_xml_path, 'w') as f:
@@ -507,8 +573,7 @@ class xmlTree(object):
             target_xml = target_xml.replace('<?xml version="1.0" ?>', '')
             target_xml = target_xml.split('\n')
             target_xml = [t for t in target_xml if 'item>' not in t and
-                            not t.isspace()]
-
+                            not t.isspace() and '/>' not in t]
 
 #            print target_xml_path
             with open(target_xml_path, 'w') as f:
@@ -517,13 +582,18 @@ class xmlTree(object):
                 f.write('{:s}'.format(target_xml[-1]))
     
     def dumpTarget(self, program, target_number, target):
-        '''
-            Edit or create target xml file
-        '''
-        if target_number=='':
+        """ Edit or create target xml file
+
+        :param program:
+        :param target_number:
+        :param target:
+        :return:
+        """
+
+        if target_number == '':
             targets_added = 1
             # program not empty?
-            if int(program.number_of_targets)!=0:
+            if int(program.number_of_targets) != 0:
                 # get targets
                 targets = self.getTargets(program)
                 
@@ -546,8 +616,8 @@ class xmlTree(object):
         dom = minidom.parseString(target_xml)
         target_xml = dom.toprettyxml()
         # <item>'s left extra \t's after them - remove them:
-        target_xml = target_xml.replace('\t\t\t','\t\t')
-        target_xml = target_xml.replace('\t\t\t\t','\t\t\t')
+        target_xml = target_xml.replace('\t\t\t', '\t\t')
+        target_xml = target_xml.replace('\t\t\t\t', '\t\t\t')
         target_xml = target_xml.replace('<?xml version="1.0" ?>', '')
         target_xml = target_xml.split('\n')
         target_xml = [t for t in target_xml if 'item>' not in t]
@@ -556,46 +626,49 @@ class xmlTree(object):
 #        for line in target_xml[1:-1]:
 #            xml_out.append('{:s}\n'.format(line))
 #        xml_out.append('{:s}'.format(target_xml[-1]))
-        ind_obs_start = [i for i,v in enumerate(target_xml) if '<Observation>' in v]
-        ind_obs_stop = [i for i,v in enumerate(target_xml) if '</Observation>' in v]
+        ind_obs_start = [i for i, v in enumerate(target_xml) if '<Observation>' in v]
+        ind_obs_stop = [i for i, v in enumerate(target_xml) if '</Observation>' in v]
         for (start, stop) in zip(ind_obs_start, ind_obs_stop):
-            ind_num_obs = [i+start for i,v in enumerate(target_xml[start:stop]) \
+            ind_num_obs = [i+start for i, v in enumerate(target_xml[start:stop]) \
                                 if '<number>' in v]
-            if len(ind_num_obs)>1:
+            if len(ind_num_obs) > 1:
                 for ind in ind_num_obs[:0:-1]:
                     target_xml.insert(ind, '\t\t</Observation>\n\t\t<Observation>')
 
-        ind_obj= [i for i,v in enumerate(target_xml) if v[:10]=='\t\t<number>']
+        ind_obj= [i for i,v in enumerate(target_xml) if v[:10] == '\t\t<number>']
         for ind in ind_obj[:0:-1]:
             target_xml.insert(ind, '\t</Object>\n\t<Object>')
 
 #        print target_xml
         
-        target_xml_path = os.path.join(self.path, \
+        target_xml_path = os.path.join(self.path,
                         'Program_{:s}'.format(program.number), 
                         'Target_{:d}.xml'.format(xml_file_number))
-
+        
+        target_xml = [t for t in target_xml if '/>' not in t]
         with open(target_xml_path, 'w') as f:
             for line in target_xml[1:-1]:
                 f.write('{:s}\n'.format(line))
             f.write('{:s}'.format(target_xml[-1]))
 
         # update program number of targets!!
-        self.dumpProgram(program.number, \
-                program.name, program.number, program.person_name, \
-                program.scientific_importance, \
-                str(int(program.number_of_targets)+targets_added),\
-                program.counter, program.total_observation_time, \
+        self.dumpProgram(program.number,
+                program.name, program.number, program.person_name,
+                program.scientific_importance,
+                str(int(program.number_of_targets)+targets_added),
+                program.counter, program.total_observation_time,
                 program.total_science_time)
                 
-        cherrypy.log('Target_{:d}.xml edited/created in Program_{:s}'.\
-                format(xml_file_number, program.number))
-        
+        cherrypy.log('Target_{:d}.xml edited/created in Program_{:s}'.
+                        format(xml_file_number, program.number))
     
     def dumpTargetList(self, program, data):
-        '''
-            List from an external file
-        '''
+        """ List from an external file
+
+        :param program:
+        :param data:
+        :return:
+        """
         # program not empty?
         if int(program.number_of_targets)!=0:
             # get targets
@@ -618,9 +691,9 @@ class xmlTree(object):
         else:
             table = data
         # target names:
-        target_name_field = [table[f].name for f in table.colnames \
-                                if 'name' in table[f].name or \
-                                (table[f].description is not None and\
+        target_name_field = [table[f].name for f in table.colnames
+                                if 'name' in table[f].name or
+                                (table[f].description is not None and
                                 'name' in table[f].description)][0]
         if type(table[target_name_field].data) is not np.ndarray:
             target_names_list = table[target_name_field].data.data
@@ -643,13 +716,13 @@ class xmlTree(object):
                 else:
                     ra_deg = table['RAJ2000']
                     dec_deg = table['DEJ2000']
-                    crd = SkyCoord(ra=ra_deg, dec=dec_deg, \
+                    crd = SkyCoord(ra=ra_deg, dec=dec_deg,
                         unit=(u.deg, u.deg), frame='icrs').to_string('hmsdms')
                     crd_str = np.array([c.split() for c in crd])
-                    ra = [ra.replace('h',':').replace('m',':').replace('s','')\
-                            for ra in crd_str[:,0]]
-                    dec = [dec.replace('d',':').replace('m',':').replace('s','')\
-                            for dec in crd_str[:,1]]
+                    ra = [ra.replace('h', ':').replace('m', ':').replace('s', '')
+                            for ra in crd_str[:, 0]]
+                    dec = [dec.replace('d',':').replace('m', ':').replace('s', '')
+                            for dec in crd_str[:, 1]]
         # no comments?
         if 'comment' in table.colnames:
             if type(table['comment'].data) is not np.ndarray:
@@ -657,7 +730,7 @@ class xmlTree(object):
             else:
                 comment = table['comment'].data
         else:
-            comment = ['']*len(target_names_list)
+            comment = ['None']*len(target_names_list)
         # Vmag/Vemag/mag
         if 'Vmag' in table.colnames:
             mag = table['Vmag'].data.tolist()
@@ -671,7 +744,31 @@ class xmlTree(object):
             epoch = table['epoch'].data.tolist()
         else:
             epoch = ['2000.0']*len(target_names_list)
-        
+            
+        # (multiple) exposures/filters
+        exp_cols = [i for i, v in enumerate(table.colnames) if 'exposure' in v]
+        filter_cols = [i for i, v in enumerate(table.colnames) if 'filter' in v]
+        if (len(exp_cols) != 0 and len(filter_cols) != 0) \
+                and len(exp_cols) != len(filter_cols):
+            raise Exception('num of exposures must be equal to num of filters')
+        obs_num = max(len(exp_cols), len(filter_cols))
+        if obs_num == 0:
+            exp = [['90']]*len(target_names_list)
+            filt = [['FILTER_SLOAN_I']]*len(target_names_list)
+        else:
+            if len(exp_cols) == 0:
+                exp = [['90']*obs_num]*len(target_names_list)
+            else:
+                # get all exposure columns:
+                exp = \
+                    list(np.array(table[list(np.array(table.colnames)[exp_cols])]))
+            if len(filter_cols) == 0:
+                filt = [['FILTER_SLOAN_I']*obs_num]*len(target_names_list)
+            else:
+                # get all filter columns:
+                filt = \
+                    list(np.array(table[list(np.array(table.colnames)[filter_cols])]))
+
         # iterate over entries in the parsed table
         for ei, _ in enumerate(table):            
             # target name must be unique! check it and skip entry if necessary:
@@ -682,28 +779,31 @@ class xmlTree(object):
                 targets_added += 1
 
             # Ordnung muss sein!
-            target = OrderedDict([('program_number',program.number),
-                      ('number',str(max_number+targets_added)),
-                      ('name',str(target_names_list[ei])), \
-                      ('time_critical_flag','0'),
-                      ('visited_times_for_completion','1'),
-                      ('seeing_limit',''), ('visited_times','0'), ('done','0'),
-                      ('cadence','0'), ('comment',str(comment[ei])),
-                      ('Object',[])])
-            target['Object'].append(OrderedDict([('number','1'), 
-                                 ('RA',ra[ei]), ('dec',dec[ei]),
-                                 ('epoch',epoch[ei]), ('magnitude',mag[ei]),
-                                 ('sun_altitude_limit',''), ('moon_phase_window',''),
-                                 ('airmass_limit',''), ('sun_distance_limit',''),
-                                 ('moon_distance_limit',''), ('sky_brightness_limit',''),
-                                 ('hour_angle_limit',''), ('done','0'),
+            target = OrderedDict([('program_number', program.number),
+                      ('number', str(max_number+targets_added)),
+                      ('name', str(target_names_list[ei])),
+                      ('time_critical_flag', '0'),
+                      ('visited_times_for_completion', '1'),
+                      ('seeing_limit', ''), ('visited_times', '0'), ('done', '0'),
+                      ('cadence', '0'), ('comment', str(comment[ei])),
+                      ('Object', [])])
+            target['Object'].append(OrderedDict([('number', '1'),
+                                 ('RA', ra[ei]), ('dec', dec[ei]),
+                                 ('epoch', epoch[ei]), ('magnitude', mag[ei]),
+                                 ('sun_altitude_limit', ''), ('moon_phase_window', ''),
+                                 ('airmass_limit', ''), ('sun_distance_limit', ''),
+                                 ('moon_distance_limit', ''), ('sky_brightness_limit', ''),
+                                 ('hour_angle_limit', ''), ('done', '0'),
                                  ('Observation',[])]))
             for oi, obj in enumerate(target['Object']):
-                target['Object'][oi]['Observation'].append(\
-                        OrderedDict([('number','1'),
-                        ('exposure_time','0'),('ao_flag','1'), ('filter_code',''),
-                        ('camera_mode',''),('repeat_times','0'),
-                        ('repeated','0'),('done','0')]))
+                for obsi in range(max(obs_num, 1)):
+                    target['Object'][oi]['Observation'].append(
+                        OrderedDict([('number', '{:d}'.format(obsi+1)),
+                        ('exposure_time', exp[ei][obsi]), ('ao_flag', '1'),
+                        ('filter_code', str(filt[ei][obsi])),
+                        ('camera_mode', getModefromMag(mag[ei])),
+                        ('repeat_times', '1'),
+                        ('repeated', '0'), ('done', '0')]))
 
             # build an xml-file:
             target_xml = dicttoxml(target, custom_root='Target', attr_type=False)
@@ -715,27 +815,37 @@ class xmlTree(object):
             target_xml = target_xml.replace('\t\t\t\t','\t\t\t')
             target_xml = target_xml.replace('<?xml version="1.0" ?>', '')
             target_xml = target_xml.split('\n')
-            target_xml = [t for t in target_xml if 'item>' not in t]
+            target_xml = [t for t in target_xml if 'item>' not in t
+                            and '/>' not in t]
+            
+            ind_obs_start = [i for i,v in enumerate(target_xml) if '<Observation>' in v]
+            ind_obs_stop = [i for i,v in enumerate(target_xml) if '</Observation>' in v]
+            for (start, stop) in zip(ind_obs_start, ind_obs_stop):
+                ind_num_obs = [i+start for i,v in enumerate(target_xml[start:stop]) \
+                                    if '<number>' in v]
+                if len(ind_num_obs) > 1:
+                    for ind in ind_num_obs[:0:-1]:
+                        target_xml.insert(ind, '\t\t</Observation>\n\t\t<Observation>')
             
 #            print target_xml
-            target_xml_path = os.path.join(self.path, \
+            target_xml_path = os.path.join(self.path,
                             'Program_{:s}'.format(program.number), 
-                            'Target_{:d}.xml'.format(\
+                            'Target_{:d}.xml'.format(
                                  int(program.number_of_targets)+targets_added))
 #            print target_xml_path
             with open(target_xml_path, 'w') as f:
                 for line in target_xml[1:-1]:
                     f.write('{:s}\n'.format(line))
                 f.write('{:s}'.format(target_xml[-1]))
-            
                 
         # update program number of targets!!
-        self.dumpProgram(program.number, \
-                program.name, program.number, program.person_name, \
-                program.scientific_importance, \
-                str(int(program.number_of_targets)+targets_added),\
-                program.counter, program.total_observation_time, \
+        self.dumpProgram(program.number,
+                program.name, program.number, program.person_name,
+                program.scientific_importance,
+                str(int(program.number_of_targets)+targets_added),
+                program.counter, program.total_observation_time,
                 program.total_science_time)
+
 
 #@cherrypy.popargs('name')
 class Root(object):
@@ -815,7 +925,7 @@ class Root(object):
         
         if program_name is not None:
             # construct json object:
-            prog = [p for p in programs if p.name==program_name]
+            prog = [p for p in programs if p.name == program_name]
             # found?
             if len(prog)>0:
                 json_obj = prog[0].makeJSON()
@@ -841,7 +951,7 @@ class Root(object):
             # found?
             if len(prog)>0:
                 target_xml = ['Target_{:d}.xml'.format(int(target_number))]
-                target_dict = xmlT.getTargets(program=prog[0], \
+                target_dict = xmlT.getTargets(program=prog[0],
                                                 target_list_xml=target_xml)[0]
                 json_obj = json.dumps(target_dict)
 #                print json_obj
@@ -853,17 +963,17 @@ class Root(object):
                 
     # save new/edited Program
     @cherrypy.expose
-    def save(self, program_number=None, \
-                name=None, number=None, person_name=None, \
-                scientific_importance=None, number_of_targets=None,\
-                counter=None, total_observation_time=None, \
+    def save(self, program_number=None,
+                name=None, number=None, person_name=None,
+                scientific_importance=None, number_of_targets=None,
+                counter=None, total_observation_time=None,
                 total_science_time=None, new=None):
         # bad input:
-        if None in (program_number, name, number, person_name, \
-                scientific_importance, number_of_targets,\
+        if None in (program_number, name, number, person_name,
+                scientific_importance, number_of_targets,
                 counter, total_observation_time, total_science_time, new) or\
-            (name=='' or number=='' or person_name=='' or\
-             scientific_importance==''):
+            (name == '' or number == '' or person_name == '' or
+             scientific_importance == ''):
             return {}
         # read in Programs.xml:
         path = self.path_to_queue
@@ -871,16 +981,15 @@ class Root(object):
         # read in Programs:
         xmlT.getPrograms(programs_xml='Programs.xml')
         # save program:
-        status = xmlT.dumpProgram(program_number, name, number, person_name, \
-                scientific_importance, number_of_targets,\
+        status = xmlT.dumpProgram(program_number, name, number, person_name,
+                scientific_importance, number_of_targets,
                 counter, total_observation_time, total_science_time, new)
                 
-        if status==False:
-            cherrypy.log('Failed to create program. Program_{:s} already exists'.\
+        if status == False:
+            cherrypy.log('Failed to create program. Program_{:s} already exists'.
                     format(number))
         else:
-            cherrypy.log('Succesfully processed Program_{:s}'.\
-                    format(number))
+            cherrypy.log('Succesfully processed Program_{:s}'.format(number))
 
         return {}
         
@@ -903,7 +1012,7 @@ class Root(object):
     @cherrypy.expose
     def targetBatchUpdate(self, program_number, time_critical_flag="", 
                           visited_times_for_completion="", seeing_limit="",
-                          cadence="", obj_epoch="", 
+                          cadence="", obj_solar_system="", obj_epoch="",
                           obj_sun_altitude_limit="",
                           obj_moon_phase_window="",
                           obj_airmass_limit="",
@@ -912,7 +1021,8 @@ class Root(object):
                           obj_sky_brightness_limit="",
                           obj_hour_angle_limit="",
                           obs_exposure_time="", obs_ao_flag="", 
-                          obs_filter_code="", obs_repeat_times=""):
+                          obs_filter_code="", obs_camera_mode="",
+                          obs_repeat_times=""):
         
         # read in Programs.xml:
         path = self.path_to_queue
@@ -924,12 +1034,12 @@ class Root(object):
         
         xmlT.batchEditTargets(program, time_critical_flag, 
                           visited_times_for_completion, seeing_limit,
-                          cadence, obj_epoch, obj_sun_altitude_limit,
+                          cadence, obj_solar_system, obj_epoch, obj_sun_altitude_limit,
                           obj_moon_phase_window, obj_airmass_limit,
                           obj_sun_distance_limit, obj_moon_distance_limit,
                           obj_sky_brightness_limit, obj_hour_angle_limit,
                           obs_exposure_time, obs_ao_flag, 
-                          obs_filter_code, obs_repeat_times)
+                          obs_filter_code, obs_camera_mode, obs_repeat_times)
         
         return {}
         
@@ -959,7 +1069,10 @@ class Root(object):
             data = parse_csv(targetList.file)
         # if not - it must be readable by astropy.io.ascii
         else:
-            data = ascii.read(targetList.file)
+#            data = ascii.read(targetList.file)
+            # first line - header with column names
+            # then - data. if multiple filters/exposures, add _N at end
+            data = ascii.read(targetList.file, header_start=0, data_start=1)
 
         # load Programs.xml:
         path = self.path_to_queue
@@ -985,72 +1098,71 @@ class Root(object):
         programs = xmlT.getPrograms(programs_xml='Programs.xml')
         
         program = [p for p in programs if p.number==kargs['program_number']][0]
-        
-        
-        nObj = len([k for k,v in kargs.iteritems() if 'obj_number' in k])
-        nObs = [len([k for k,v in kargs.iteritems() \
+
+        nObj = len([k for k, v in kargs.iteritems() if 'obj_number' in k])
+        nObs = [len([k for k, v in kargs.iteritems()
                     if 'obs_number_{:d}'.format(i+1) in k]) for i in range(nObj)]
 #        print nObj,nObs
         # make target dict:
-        target = OrderedDict((('program_number',kargs['program_number']),\
-                  ('number',kargs['number']),\
-                  ('name',kargs['name']),\
-                  ('visited_times_for_completion',kargs['visited_times_for_completion']),\
-                  ('seeing_limit',kargs['seeing_limit']),\
-                  ('visited_times',kargs['visited_times']),\
-                  ('done',kargs['done']),\
-                  ('cadence',kargs['cadence']),\
-                  ('comment',kargs['comment']),\
-                  ('time_critical_flag',kargs['time_critical_flag']),\
-                  ('Object',[])))
+        target = OrderedDict((('program_number', kargs['program_number']),
+                  ('number', kargs['number']),
+                  ('name', kargs['name']),
+                  ('visited_times_for_completion', kargs['visited_times_for_completion']),
+                  ('seeing_limit', kargs['seeing_limit']),
+                  ('visited_times', kargs['visited_times']),
+                  ('done', kargs['done']),
+                  ('cadence', kargs['cadence']),
+                  ('comment', kargs['comment']),
+                  ('time_critical_flag', kargs['time_critical_flag']),
+                  ('Object', [])))
         obj_numbers = sorted([s[-s[::-1].index('_'):] for s in kargs if 'obj_number' in s])
         obs_numbers = [ sorted([s[-s[::-1].index('_'):] for s in kargs \
                         if 'obs_number_{:d}'.format(ii+1) in s]) for ii in range(nObj)]
 
         for nOj in range(nObj):
             # fix number if necessary
-            target['Object'].append(OrderedDict(( \
-                ('number',nOj+1),\
-                ('RA',kargs['obj_RA_{:s}'.format(obj_numbers[nOj])]),\
-                ('dec',kargs['obj_dec_{:s}'.format(obj_numbers[nOj])]),\
-                ('ra_rate',kargs['obj_ra_rate_{:s}'.format(obj_numbers[nOj])]),\
-                ('dec_rate',kargs['obj_dec_rate_{:s}'.format(obj_numbers[nOj])]),\
-                ('epoch',kargs['obj_epoch_{:s}'.format(obj_numbers[nOj])]),\
-                ('magnitude',kargs['obj_magnitude_{:s}'.format(obj_numbers[nOj])]),\
-                ('sun_altitude_limit',\
-                    kargs['obj_sun_altitude_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('moon_phase_window',\
-                    kargs['obj_moon_phase_window_{:s}'.format(obj_numbers[nOj])]),\
-                ('airmass_limit',\
-                    kargs['obj_airmass_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('sun_distance_limit',\
-                    kargs['obj_sun_distance_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('moon_distance_limit',\
-                    kargs['obj_moon_distance_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('sky_brightness_limit',\
-                    kargs['obj_sky_brightness_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('hour_angle_limit',\
-                    kargs['obj_hour_angle_limit_{:s}'.format(obj_numbers[nOj])]),\
-                ('done',kargs['obj_done_{:s}'.format(obj_numbers[nOj])]),\
-                ('Observation',[])
+            target['Object'].append(OrderedDict((
+                ('number', nOj+1),
+                ('RA', kargs['obj_RA_{:s}'.format(obj_numbers[nOj])]),
+                ('dec', kargs['obj_dec_{:s}'.format(obj_numbers[nOj])]),
+                ('ra_rate', kargs['obj_ra_rate_{:s}'.format(obj_numbers[nOj])]),
+                ('dec_rate', kargs['obj_dec_rate_{:s}'.format(obj_numbers[nOj])]),
+                ('epoch', kargs['obj_epoch_{:s}'.format(obj_numbers[nOj])]),
+                ('magnitude', kargs['obj_magnitude_{:s}'.format(obj_numbers[nOj])]),
+                ('sun_altitude_limit',
+                    kargs['obj_sun_altitude_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('moon_phase_window',
+                    kargs['obj_moon_phase_window_{:s}'.format(obj_numbers[nOj])]),
+                ('airmass_limit',
+                    kargs['obj_airmass_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('sun_distance_limit',
+                    kargs['obj_sun_distance_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('moon_distance_limit',
+                    kargs['obj_moon_distance_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('sky_brightness_limit',
+                    kargs['obj_sky_brightness_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('hour_angle_limit',
+                    kargs['obj_hour_angle_limit_{:s}'.format(obj_numbers[nOj])]),
+                ('done', kargs['obj_done_{:s}'.format(obj_numbers[nOj])]),
+                ('Observation', [])
             )))
             for nOs in range(nObs[nOj]):
                 # fix number if necessary
-                target['Object'][nOj]['Observation'].append(OrderedDict(( \
-                    ('number',nOs+1),\
-                    ('exposure_time',kargs['obs_exposure_time_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('ao_flag',kargs['obs_ao_flag_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('filter_code',kargs['obs_filter_code_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('camera_mode',kargs['obs_camera_mode_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('repeat_times',kargs['obs_repeat_times_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('repeated',kargs['obs_repeated_{:s}_{:s}'.\
-                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),\
-                    ('done',kargs['obs_done_{:s}_{:s}'.\
+                target['Object'][nOj]['Observation'].append(OrderedDict((
+                    ('number', nOs+1),
+                    ('exposure_time', kargs['obs_exposure_time_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('ao_flag', kargs['obs_ao_flag_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('filter_code', kargs['obs_filter_code_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('camera_mode', kargs['obs_camera_mode_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('repeat_times', kargs['obs_repeat_times_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('repeated', kargs['obs_repeated_{:s}_{:s}'.
+                            format(obj_numbers[nOj], obs_numbers[nOj][nOs])]),
+                    ('done', kargs['obs_done_{:s}_{:s}'.
                             format(obj_numbers[nOj], obs_numbers[nOj][nOs])])
                 )))
 
@@ -1062,8 +1174,8 @@ class Root(object):
     @cherrypy.expose
     def removeTarget(self, program_number=None, target_number=None):
         # bad input:
-        if program_number is None or program_number=="" \
-            or target_number is None or target_number=="":
+        if program_number is None or program_number == "" \
+                or target_number is None or target_number == "":
             return {}
         # read in Programs.xml:
         path = self.path_to_queue
@@ -1073,17 +1185,17 @@ class Root(object):
         # get program names:
         xmlT.removeTarget(program_number, target_number)
         
-        cherrypy.log('removed Target_{:s}.xml from Program_{:s}'.\
+        cherrypy.log('removed Target_{:s}.xml from Program_{:s}'.
                         format(target_number, program_number))
-        cherrypy.log('Note that remaining target xml files were ranaimed if '+\
+        cherrypy.log('Note that remaining target xml files were ranaimed if ' +
                 'target_number<number_of_targets to keep file numbering order')
         
         return {}
         
 
 class Program(object):
-    def __init__(self, number, name, person_name, scientific_importance, \
-                 number_of_targets, counter, total_observation_time, \
+    def __init__(self, number, name, person_name, scientific_importance,
+                 number_of_targets, counter, total_observation_time,
                  total_science_time):
         self.number = number
         self.name = name
@@ -1095,16 +1207,15 @@ class Program(object):
         self.total_science_time = total_science_time
 
     def makeJSON(self):
-        dic = OrderedDict([['number', self.number],\
-                           ['name', self.name],\
-                           ['person_name', self.person_name],\
-                           ['scientific_importance', self.scientific_importance],\
-                           ['number_of_targets', self.number_of_targets],\
-                           ['counter', self.counter],\
-                           ['total_observation_time', self.total_observation_time],\
+        dic = OrderedDict([['number', self.number],
+                           ['name', self.name],
+                           ['person_name', self.person_name],
+                           ['scientific_importance', self.scientific_importance],
+                           ['number_of_targets', self.number_of_targets],
+                           ['counter', self.counter],
+                           ['total_observation_time', self.total_observation_time],
                            ['total_science_time', self.total_science_time]])
         return json.dumps(dic)
-
 
 
 if __name__ == '__main__':
@@ -1139,6 +1250,7 @@ if __name__ == '__main__':
          }
     }
 #    path_to_queue = './'
-    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
-#    path_to_queue = '/Users/dmitryduev/web/qserv/test/'
+#    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
+    path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
+#     path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
