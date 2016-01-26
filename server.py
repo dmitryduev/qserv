@@ -706,7 +706,7 @@ class xmlTree(object):
             dec = [dec.replace(' ', ':') for dec in table['_DEJ2000']]
         else:
             # ra/dec in degrees?
-            if not 'RAJ2000' in table.colnames or not 'DEJ2000' in table.colnames:
+            if 'RAJ2000' not in table.colnames or 'DEJ2000' not in table.colnames:
                 raise Exception('Could not find coordinates in the imported file')
             else:
                 # get units:
@@ -1222,6 +1222,11 @@ if __name__ == '__main__':
 #    cherrypy.quickstart(Root())
     
     USERS = {'admin': 'robo@0'}
+
+    def validate_password(realm, username, password):
+        if username in USERS and USERS[username] == password:
+            return True
+        return False
     
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
                              'server.socket_port': 8080,
@@ -1232,25 +1237,31 @@ if __name__ == '__main__':
 
     conf = {
          '/': {
-             'tools.sessions.on': True,
-             'tools.staticdir.root': os.path.abspath(os.getcwd()),
-             'tools.auth_digest.on': True,
-             'tools.auth_digest.realm': 'hola!',
-             'tools.auth_digest.get_ha1': auth_digest.get_ha1_dict_plain(USERS),
-             'tools.auth_digest.key': 'd8765asdf6c787ag333'
+                'tools.sessions.on': True,
+                'tools.staticdir.root': os.path.abspath(os.getcwd()),
+                # 'tools.auth_digest.on': True,
+                # 'tools.auth_digest.realm': 'hola!',
+                # 'tools.auth_digest.get_ha1': auth_digest.get_ha1_dict_plain(USERS),
+                # 'tools.auth_digest.key': 'd8765asdf6c787ag333'
+                'tools.auth_basic.on': True,
+                'tools.auth_basic.realm': 'localhost',
+                'tools.auth_basic.checkpassword': validate_password
          },
          '/static': {
-             'tools.staticdir.on': True,
-#             'tools.staticdir.dir': os.path.join(os.path.abspath(os.getcwd()), 'public')
-             'tools.staticdir.dir': './public',
-             'tools.auth_digest.on': True,
-             'tools.auth_digest.realm': 'hola!',
-             'tools.auth_digest.get_ha1': auth_digest.get_ha1_dict_plain(USERS),
-             'tools.auth_digest.key': 'd8765asdf6c787ag333'
+            'tools.staticdir.on': True,
+            # 'tools.staticdir.dir': os.path.join(os.path.abspath(os.getcwd()), 'public')
+            'tools.staticdir.dir': './public',
+            # 'tools.auth_digest.on': True,
+            # 'tools.auth_digest.realm': 'hola!',
+            # 'tools.auth_digest.get_ha1': auth_digest.get_ha1_dict_plain(USERS),
+            # 'tools.auth_digest.key': 'd8765asdf6c787ag333'
+            'tools.auth_basic.on': True,
+            'tools.auth_basic.realm': 'localhost',
+            'tools.auth_basic.checkpassword': validate_password
          }
     }
 #    path_to_queue = './'
 #    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
-    path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
-#     path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
+#     path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
+    path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
