@@ -34,6 +34,17 @@ import numpy as np
 env = Environment(loader=FileSystemLoader('templates'))
 
 
+def filter_names(_fin='filters.txt'):
+    """ Only these filter names should be used
+
+    :param _fin:
+    :return:
+    """
+    with open(_fin, 'r') as f:
+        f_lines = f.readlines()
+    return [l.split()[0] for l in f_lines]
+
+
 def getModefromMag(mag):
     '''
         VICD mode depending on the object magnitude
@@ -541,7 +552,10 @@ class xmlTree(object):
                         if obs.find('filter_code') is None:
                             obs.append(Element('filter_code'))
                         tag = obs.find('filter_code')
-                        tag.text = obs_filter_code
+                        if obs_filter_code in filter_names():
+                            tag.text = obs_filter_code
+                        else:
+                            tag.text = 'FILTER_SLOAN_I'
                         
                     if obs_camera_mode != "":
                         # does the tag exist? if not, create
@@ -797,13 +811,22 @@ class xmlTree(object):
                                  ('Observation',[])]))
             for oi, obj in enumerate(target['Object']):
                 for obsi in range(max(obs_num, 1)):
-                    target['Object'][oi]['Observation'].append(
-                        OrderedDict([('number', '{:d}'.format(obsi+1)),
-                        ('exposure_time', exp[ei][obsi]), ('ao_flag', '1'),
-                        ('filter_code', str(filt[ei][obsi])),
-                        ('camera_mode', getModefromMag(mag[ei])),
-                        ('repeat_times', '1'),
-                        ('repeated', '0'), ('done', '0')]))
+                    if str(filt[ei][obsi]) in filter_names():
+                        target['Object'][oi]['Observation'].append(
+                            OrderedDict([('number', '{:d}'.format(obsi+1)),
+                            ('exposure_time', exp[ei][obsi]), ('ao_flag', '1'),
+                            ('filter_code', str(filt[ei][obsi])),
+                            ('camera_mode', getModefromMag(mag[ei])),
+                            ('repeat_times', '1'),
+                            ('repeated', '0'), ('done', '0')]))
+                    else:
+                        target['Object'][oi]['Observation'].append(
+                            OrderedDict([('number', '{:d}'.format(obsi+1)),
+                            ('exposure_time', exp[ei][obsi]), ('ao_flag', '1'),
+                            ('filter_code', 'FILTER_SLOAN_I'),
+                            ('camera_mode', getModefromMag(mag[ei])),
+                            ('repeat_times', '1'),
+                            ('repeated', '0'), ('done', '0')]))
 
             # build an xml-file:
             target_xml = dicttoxml(target, custom_root='Target', attr_type=False)
@@ -1262,6 +1285,6 @@ if __name__ == '__main__':
     }
 #    path_to_queue = './'
 #    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
-#     path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
-    path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
+    path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
+#     path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
