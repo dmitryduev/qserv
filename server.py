@@ -743,6 +743,8 @@ class xmlTree(object):
                 comment = table['comment'].data.data
             else:
                 comment = table['comment'].data
+            if max([len(cm) for cm in comment]) == 0:
+                comment = ['None']*len(target_names_list)
         else:
             comment = ['None']*len(target_names_list)
         # Vmag/Vemag/mag
@@ -1252,10 +1254,10 @@ if __name__ == '__main__':
         return False
     
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                             'server.socket_port': 8080,
-                             'server.thread_pool' : 8,
-                             'log.access_file': 'server_access.log',
-                             'log.error_file': 'server_actions.log'
+                            'server.socket_port': 8081,
+                            'server.thread_pool': 8,
+                            'log.access_file': 'server_access.log',
+                            'log.error_file': 'server_actions.log'
                             })
 
     conf = {
@@ -1286,5 +1288,5 @@ if __name__ == '__main__':
 #    path_to_queue = './'
 #    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
     path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
-#     path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
+    # path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
