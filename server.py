@@ -1154,6 +1154,7 @@ class Root(object):
                 ('dec_rate', kargs['obj_dec_rate_{:s}'.format(obj_numbers[nOj])]),
                 ('epoch', kargs['obj_epoch_{:s}'.format(obj_numbers[nOj])]),
                 ('magnitude', kargs['obj_magnitude_{:s}'.format(obj_numbers[nOj])]),
+                ('solar_system', kargs['obj_solar_system_{:s}'.format(obj_numbers[nOj])]),
                 ('sun_altitude_limit',
                     kargs['obj_sun_altitude_limit_{:s}'.format(obj_numbers[nOj])]),
                 ('moon_phase_window',
