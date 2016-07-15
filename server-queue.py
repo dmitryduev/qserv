@@ -65,9 +65,9 @@ def getModefromMag(mag):
 
 def parse_csv(csv):
     f_lines = csv.read()
-    f_lines = [l for l in f_lines.split('\r') if len(l)>0]
-    colnames = [l for l in f_lines[0].split(',') if len(l)>0]
-    data_raw = np.array([l.split(',') for l in f_lines[1:]])
+    f_lines = [l for l in f_lines.split('\r') if len(l) > 0]
+    colnames = [l for l in f_lines[0].split(',') if len(l) > 0]
+    data_raw = np.array([l.split(',').strip() for l in f_lines[1:]])
 
     data_od = OrderedDict()
     for i,c in enumerate(colnames):
