@@ -1,0 +1,4 @@
+astropy>=2.0.14
+cherrypy>=17.4.2
+dicttoxml>=1.7.4
+jinja2>=2.10.1

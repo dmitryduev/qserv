@@ -1288,6 +1288,7 @@ if __name__ == '__main__':
     }
 #    path_to_queue = './'
 #    path_to_queue = '/Users/dmitryduev/_caltech/roboao/Queue/'
-    path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
+#     path_to_queue = '/Users/dmitryduev/web/qserv/operation/'
     # path_to_queue = '/Users/dmitryduev/web/qserv/operation-current/'
+    path_to_queue = '/queue'
     cherrypy.quickstart(Root(path_to_queue), '/', conf)
