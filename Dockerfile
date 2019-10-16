@@ -35,4 +35,4 @@ WORKDIR /app
 RUN pip install -r /app/requirements.txt
 
 #CMD /bin/bash
-CMD /usr/local/bin/python server-queue.py
+CMD python server-queue.py
