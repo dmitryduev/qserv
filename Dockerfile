@@ -2,7 +2,15 @@ FROM python:2.7
 
 RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get -y install vim
 
-RUN mkdir /queue && mkdir /queue/public && mkdir /queue/templates && mkdir /app
+RUN mkdir /queue && mkdir /app
+
+# Create a non-root user roboao and switch to it
+RUN adduser --disabled-password --gecos '' --shell /bin/bash roboao && \
+    chown -R roboao:roboao /app
+RUN echo "roboao ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-roboao
+USER roboao
+
+RUN sudo chown -R roboao:roboao /queue /app
 
 COPY public /app/public
 COPY templates /app/templates
