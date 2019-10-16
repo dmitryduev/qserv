@@ -1,6 +1,7 @@
 FROM python:2.7
 
-RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get -y install vim
+RUN apt-get update && apt-get -y install apt-file && apt-file update && \
+    apt-get -y install vim sudo
 
 RUN mkdir /queue && mkdir /app
 
